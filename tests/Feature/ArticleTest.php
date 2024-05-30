@@ -17,15 +17,17 @@ class ArticleTest extends TestCase
     {
         parent::setUp();
 
-        // Create a user and get the authentication token
+        // Ensure a fresh state before each test
+        $this->artisan('migrate:fresh');
+
+        // Create a unique user and get the authentication token
         $user = User::factory()->create([
-            'name' => 'testUser',
-            'email' => 'test12sss34@example.com',
+            'email' => 'test' . time() . '@example.com',
             'password' => bcrypt('password'),
         ]);
 
         $response = $this->postJson('/api/login', [
-            'email' => 'test12ssss34@example.com',
+            'email' => $user->email,
             'password' => 'password',
         ]);
 
@@ -46,7 +48,7 @@ class ArticleTest extends TestCase
     {
         Article::factory()->count(3)->create();
 
-        $response = $this->getJson('/api/articles', $this->withAuthHeaders());
+        $response = $this->getJson('/api/article', $this->withAuthHeaders());
 
         $response->assertStatus(200)
                  ->assertJsonCount(3, 'data');
@@ -57,7 +59,7 @@ class ArticleTest extends TestCase
     {
         $article = Article::factory()->create();
 
-        $response = $this->getJson("/api/articles/{$article->id}", $this->withAuthHeaders());
+        $response = $this->getJson("/api/article/{$article->id}", $this->withAuthHeaders());
 
         $response->assertStatus(200)
                  ->assertJson([
@@ -66,7 +68,7 @@ class ArticleTest extends TestCase
                          'title' => $article->title,
                          'body' => $article->body,
                          'author' => $article->author,
-                         'publication_date' => $article->publication_date->toJSON(),
+                         'publication_date' => $article->publication_date,
                      ]
                  ]);
     }
@@ -76,7 +78,7 @@ class ArticleTest extends TestCase
     {
         $articleData = Article::factory()->make()->toArray();
 
-        $response = $this->postJson('/api/articles', $articleData, $this->withAuthHeaders());
+        $response = $this->postJson('/api/article', $articleData, $this->withAuthHeaders());
 
         $response->assertStatus(201)
                  ->assertJson([
@@ -102,7 +104,7 @@ class ArticleTest extends TestCase
             'publication_date' => now()->format('Y-m-d'),
         ];
 
-        $response = $this->putJson("/api/articles/{$article->id}", $updatedData, $this->withAuthHeaders());
+        $response = $this->putJson("/api/article/{$article->id}", $updatedData, $this->withAuthHeaders());
 
         $response->assertStatus(200)
                  ->assertJson([
@@ -111,7 +113,7 @@ class ArticleTest extends TestCase
                          'title' => 'Updated Title',
                          'body' => 'Updated body',
                          'author' => 'Updated Author',
-                         'publication_date' => now()->toJSON(),
+                         'publication_date' => now(),
                      ]
                  ]);
 
@@ -123,7 +125,7 @@ class ArticleTest extends TestCase
     {
         $article = Article::factory()->create();
 
-        $response = $this->deleteJson("/api/articles/{$article->id}", [], $this->withAuthHeaders());
+        $response = $this->deleteJson("/api/article/{$article->id}", [], $this->withAuthHeaders());
 
         $response->assertStatus(204);
         $this->assertDatabaseMissing('articles', ['id' => $article->id]);
